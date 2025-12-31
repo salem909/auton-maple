@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "name": "Example Farm Route",
+    "description": "A simple example routine showing the JSON format",
+    "author": "AutoMaple Flow Editor",
+    "version": "1.0",
+    "map_name": "Training Area",
+    "created": "2025-12-31",
+    "modified": "2025-12-31"
+  },
+  "start_node": "start_point",
+  "nodes": [
+    {
+      "id": "start_point",
+      "type": "point",
+      "editor_position": {
+        "x": 100,
+        "y": 100
+      },
+      "game_position": {
+        "x": 100,
+        "y": 200
+      },
+      "commands": [
+        {
+          "type": "buff",
+          "params": {}
+        }
+      ],
+      "frequency": 1,
+      "skip": false,
+      "adjust": false,
+      "next": "farm_spot_1"
+    },
+    {
+      "id": "farm_spot_1",
+      "type": "point",
+      "editor_position": {
+        "x": 300,
+        "y": 100
+      },
+      "game_position": {
+        "x": 300,
+        "y": 200
+      },
+      "commands": [
+        {
+          "type": "attack",
+          "params": {}
+        }
+      ],
+      "frequency": 1,
+      "skip": false,
+      "adjust": true,
+      "next": "farm_spot_2"
+    },
+    {
+      "id": "farm_spot_2",
+      "type": "point",
+      "editor_position": {
+        "x": 500,
+        "y": 100
+      },
+      "game_position": {
+        "x": 500,
+        "y": 150
+      },
+      "commands": [
+        {
+          "type": "attack",
+          "params": {}
+        }
+      ],
+      "frequency": 1,
+      "skip": false,
+      "adjust": false,
+      "next": "loop_check"
+    },
+    {
+      "id": "loop_check",
+      "type": "jump",
+      "editor_position": {
+        "x": 500,
+        "y": 300
+      },
+      "target_label": "main_loop",
+      "frequency": 1,
+      "skip": false,
+      "next": null
+    },
+    {
+      "id": "main_loop_label",
+      "type": "label",
+      "editor_position": {
+        "x": 100,
+        "y": 300
+      },
+      "label": "main_loop",
+      "next": "start_point"
+    }
+  ]
+}

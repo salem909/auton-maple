@@ -22,6 +22,17 @@ class File(MenuBarItem):
             state=tk.DISABLED
         )
         self.add_separator()
+        self.add_command(
+            label='Visual Flow Editor',
+            command=utils.async_callback(self, File._open_flow_editor),
+            state=tk.DISABLED
+        )
+        self.add_command(
+            label='Convert CSV to JSON',
+            command=utils.async_callback(self, File._convert_csv_to_json),
+            state=tk.DISABLED
+        )
+        self.add_separator()
         self.add_command(label='Load Command Book', command=utils.async_callback(self, File._load_commands))
         self.add_command(
             label='Load Routine',
@@ -33,6 +44,8 @@ class File(MenuBarItem):
         self.entryconfig('New Routine', state=tk.NORMAL)
         self.entryconfig('Save Routine', state=tk.NORMAL)
         self.entryconfig('Load Routine', state=tk.NORMAL)
+        self.entryconfig('Visual Flow Editor', state=tk.NORMAL)
+        self.entryconfig('Convert CSV to JSON', state=tk.NORMAL)
 
     @staticmethod
     @utils.run_if_disabled('\n[!] Cannot create a new routine while Auto Maple is enabled')
@@ -66,14 +79,56 @@ class File(MenuBarItem):
                 return
         file_path = askopenfilename(initialdir=get_routines_dir(),
                                     title='Select a routine',
-                                    filetypes=[('*.csv', '*.csv')])
+                                    filetypes=[('Routine Files', '*.csv *.json'), 
+                                             ('CSV files', '*.csv'),
+                                             ('JSON files', '*.json')])
         if file_path:
             config.routine.load(file_path)
             import_root = Import_Settings("CBR")
             import_root.set("last_routine",file_path)
             import_root.save_config()
 
-            
+    @staticmethod
+    @utils.run_if_disabled('\n[!] Cannot open flow editor while Auto Maple is enabled')
+    def _open_flow_editor():
+        from src.gui.flow_editor import FlowEditorWindow
+        from src.routine.routine_converter import RoutineConverter
+        
+        # Convert current routine to flow format if it exists
+        routine_flow = None
+        if config.routine.path and len(config.routine) > 0:
+            try:
+                if config.routine.path.endswith('.csv'):
+                    routine_flow = RoutineConverter.csv_to_json(config.routine.path)
+                elif config.routine.path.endswith('.json'):
+                    from src.routine.routine_schema import RoutineFlow
+                    routine_flow = RoutineFlow.load(config.routine.path)
+            except Exception as e:
+                print(f"[!] Error loading routine into flow editor: {e}")
+        
+        window = FlowEditorWindow(config.gui.root, routine_flow)
+        window.focus()
+
+    @staticmethod
+    @utils.run_if_disabled('\n[!] Cannot convert routines while Auto Maple is enabled')
+    def _convert_csv_to_json():
+        from src.routine.routine_converter import RoutineConverter
+        from tkinter.messagebox import showinfo, showerror
+        
+        csv_path = askopenfilename(initialdir=get_routines_dir(),
+                                  title='Select CSV routine to convert',
+                                  filetypes=[('CSV files', '*.csv')])
+        if csv_path:
+            json_path = asksaveasfilename(initialdir=get_routines_dir(),
+                                        title='Save as JSON',
+                                        filetypes=[('JSON files', '*.json')],
+                                        defaultextension='*.json')
+            if json_path:
+                try:
+                    RoutineConverter.csv_to_json(csv_path, json_path)
+                    showinfo("Success", f"Converted {os.path.basename(csv_path)} to JSON format!")
+                except Exception as e:
+                    showerror("Error", f"Conversion failed: {e}")
 
     @staticmethod
     @utils.run_if_disabled('\n[!] Cannot load command books while Auto Maple is enabled')

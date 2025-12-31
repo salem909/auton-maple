@@ -192,7 +192,7 @@ class Routine:
     def load(self, file=None):
         """
         Attempts to load FILE into a sequence of Components. If no file path is provided, attempts to
-        load the previous routine file.
+        load the previous routine file. Supports both CSV and JSON formats.
         :param file:    The file's path.
         :return:        None
         """
@@ -209,10 +209,18 @@ class Routine:
                 return False
 
         ext = splitext(file)[1]
-        if ext != '.csv':
-            print(f" !  '{ext}' is not a supported file extension.")
+        if ext == '.json':
+            # Load JSON format routine
+            return self._load_json(file)
+        elif ext == '.csv':
+            # Load CSV format routine (legacy)
+            return self._load_csv(file)
+        else:
+            print(f" !  '{ext}' is not a supported file extension. Use .csv or .json")
             return False
 
+    def _load_csv(self, file):
+        """Load routine from CSV format (legacy)."""
         self.clear()
 
         # Compile and Link
@@ -227,6 +235,51 @@ class Routine:
         config.gui.view.status.set_routine(basename(file))
         config.gui.edit.minimap.draw_default()
         print(f" ~  Finished loading routine '{basename(splitext(file)[0])}'.")
+        return True
+
+    def _load_json(self, file):
+        """Load routine from JSON format (modern flow-based)."""
+        from src.routine.routine_schema import RoutineFlow
+        from src.routine.routine_converter import RoutineConverter
+        import tempfile
+        
+        try:
+            # Load JSON and convert to CSV for execution
+            routine_flow = RoutineFlow.load(file)
+            
+            # Create temporary CSV for execution
+            temp_csv = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False)
+            csv_content = RoutineConverter.json_to_csv(file)
+            temp_csv.write(csv_content)
+            temp_csv.close()
+            
+            # Load the temporary CSV
+            self.clear()
+            self.compile(temp_csv.name)
+            
+            for c in self.sequence:
+                if isinstance(c, Jump):
+                    c.bind()
+            
+            self.dirty = False
+            self.path = file  # Keep original JSON path
+            config.layout = Layout.load(file)
+            config.gui.view.status.set_routine(f"{basename(file)} (JSON)")
+            config.gui.edit.minimap.draw_default()
+            
+            print(f" ~  Finished loading JSON routine '{routine_flow.metadata.name}'.")
+            print(f"    Nodes: {len(routine_flow.nodes)}")
+            
+            # Clean up temp file
+            import os
+            os.unlink(temp_csv.name)
+            
+            return True
+        except Exception as e:
+            print(f" !  Error loading JSON routine: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def compile(self, file):
         self.labels = {}
